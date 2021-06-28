@@ -2,19 +2,70 @@ from django.shortcuts import render, get_object_or_404, redirect
 from .models import News, Category
 from .forms import NewsForm
 from django.views.generic import ListView, DetailView, CreateView
+from .utils import MyMixin
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.paginator import Paginator
+from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib import messages
+from django.contrib.auth import login, authenticate
 
 
 
-class HomeNews(ListView):
+def register(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            messages.success(request, 'Вы успешно зарегистрировались')
+            form.save()
+            return redirect('/admin/')
+        else:
+            messages.error(request, 'Ошибка регистрации')
+    else:
+        form = UserCreationForm
+    return render(request,'news/register.html', {'form': form})
+
+
+def sign_in(request):
+    if request.method == 'POST':
+        username = request.POST['username']
+        password = request.POST['password']
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            messages.success(request, 'Вы успешно авторизовались')
+            return redirect('home')
+        else:
+            messages.error(request, 'Ошибка входа')
+            return redirect('login')
+    else:
+        form = AuthenticationForm()
+    return render(request, 'news/login.html', {'form': form})
+
+
+
+def test(request):
+    objects = ['baha','janarbek','amina','dilmurat','azamat','ajar','beka','bekjan','bektur']
+    paginator = Paginator(objects, 3)
+    page_num = request.GET.get('page',1)
+    page_objects = paginator.get_page(page_num)
+    return render(request, 'news/test.html', {'page_obj':page_objects})
+
+
+
+class HomeNews(MyMixin,ListView):
     model = News
     template_name = 'news/home_news_list.html'
     context_object_name = 'news'
+    mixin_prop = "hello world"
+    paginate_by = 2
     #extra_context = {'title': "Это то что я захотел"}
+
 
 # Меняет имя страницы
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = 'Главная страница'
+        context['mixin_prop'] = self.get_prop()
         return context
 
     def get_queryset(self):
@@ -25,6 +76,7 @@ class NewsByCategory(ListView):
     model = News
     template_name = 'news/home_news_list.html'
     context_object_name = 'news'
+    paginate_by = 2
 
     def get_context_data(self, *, object_list=None, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -42,9 +94,10 @@ class ViewNews(DetailView):
     #pk_url_kwarg = 'news_id'
     context_object_name = 'news_item'
 
-class CreateNews(CreateView):
+class CreateNews(LoginRequiredMixin,CreateView):
     form_class = NewsForm
     template_name = 'news/add_news.html'
+    raise_exception = True
 
 
 

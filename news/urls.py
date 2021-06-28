@@ -17,6 +17,9 @@ urlpatterns = [
     path('news/add-news/', CreateNews.as_view(), name='add_news'),
 
     path('ckeditor/', include('ckeditor_uploader.urls')),
+    path('test/', test, name='test'),
+    path('register/', register, name='register'),
+    path('sign_in/', sign_in, name='login'),
 
 
 ]
